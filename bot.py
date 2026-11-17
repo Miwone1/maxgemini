@@ -7,7 +7,6 @@ app = Flask(__name__)
 
 # Получаем ключи из переменных окружения Render
 VK_TOKEN = os.environ.get("VK_TOKEN")
-VK_CONFIRMATION_CODE = os.environ.get("VK_CONFIRMATION_CODE") # Код подтверждения от ВК (если нужен)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 # Инициализация клиента Gemini
@@ -16,7 +15,7 @@ gemini_client = genai.Client(api_key=GEMINI_API_KEY)
 def send_vk_message(user_id: int, text: str):
     """Отправка ответа пользователю во ВКонтакте."""
     access_token = os.environ.get("VK_TOKEN")
-    random_id = int(os.environ.get("RANDOM_ID", 0)) + 1 # Простой генератор случайных чисел
+    random_id = int(os.environ.get("RANDOM_ID", 0)) + 1
     
     url = "https://api.vk.com/method/messages.send"
     params = {
@@ -53,11 +52,11 @@ def webhook():
     """Прием входящих событий от ВКонтакте."""
     data = request.json or {}
     
-    # 1. Подтверждение сервера со стороны ВК при настройке Callback API
-   if data.get("type") == "confirmation":
-    return "1b572e4", 200
+    # Подтверждение сервера для ВК
+    if data.get("type") == "confirmation":
+        return "1b572e4", 200
 
-    # 2. Обработка входящего сообщения
+    # Обработка входящего сообщения
     if data.get("type") == "message_new":
         object_data = data.get("object", {})
         message = object_data.get("message", {})
