@@ -5,35 +5,38 @@ from google import genai
 
 app = Flask(__name__)
 
-# Получаем ключи и порт из переменных окружения Render
-MAX_BOT_TOKEN = os.environ.get("MAX_BOT_TOKEN")
+# Получаем ключи из переменных окружения Render
+VK_TOKEN = os.environ.get("VK_TOKEN")
+VK_CONFIRMATION_CODE = os.environ.get("VK_CONFIRMATION_CODE") # Код подтверждения от ВК (если нужен)
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-PORT = int(os.environ.get("PORT", 10000))
 
 # Инициализация клиента Gemini
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)
-BASE_URL = "https://platform-api.max.ru"
-HEADERS = {
-    "Authorization": MAX_BOT_TOKEN,
-    "Content-Type": "application/json"
-}
 
-def send_message(chat_id: int, text: str):
-    """Отправка ответа пользователю в MAX."""
-    url = f"{BASE_URL}/messages"
-    params = {"chat_id": chat_id}
-    payload = {"text": text}
+def send_vk_message(user_id: int, text: str):
+    """Отправка ответа пользователю во ВКонтакте."""
+    access_token = os.environ.get("VK_TOKEN")
+    random_id = int(os.environ.get("RANDOM_ID", 0)) + 1 # Простой генератор случайных чисел
+    
+    url = "https://api.vk.com/method/messages.send"
+    params = {
+        "user_id": user_id,
+        "message": text,
+        "random_id": random_id,
+        "access_token": access_token,
+        "v": "5.131"
+    }
     try:
-        response = requests.post(url, headers=HEADERS, params=params, json=payload, timeout=15)
+        response = requests.post(url, data=params, timeout=15)
         response.raise_for_status()
     except Exception as e:
-        print(f"Ошибка отправки сообщения в MAX: {e}")
+        print(f"Ошибка отправки сообщения в ВК: {e}")
 
 def ask_gemini(prompt: str) -> str:
     """Запрос к модели Gemini."""
     try:
         response = gemini_client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-2.5-flash",
             contents=prompt,
         )
         return response.text or "Не удалось сформировать ответ."
@@ -42,26 +45,34 @@ def ask_gemini(prompt: str) -> str:
 
 @app.route("/", methods=["GET"])
 def health_check():
-    """Эндпоинт для UptimeRobot, чтобы бот не засыпал."""
-    return "Bot is running!", 200
+    """Эндпоинт для UptimeRobot."""
+    return "VK Bot is running!", 200
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
-    """Прием входящих сообщений от мессенджера MAX."""
+    """Прием входящих событий от ВКонтакте."""
     data = request.json or {}
-    for update in data.get("updates", []):
-        if update.update_type == "message_created" or update.get("update_type") == "message_created":
-            message = update.get("message", {})
-            body = message.get("body", {})
-            user_text = body.get("text")
-            chat_id = message.get("recipient", {}).get("chat_id")
+    
+    # 1. Подтверждение сервера со стороны ВК при настройке Callback API
+    if data.get("type") == "confirmation":
+        # ВК пришлет строку confirmation_code, которую нужно вернуть в ответ
+        confirmation_token = os.environ.get("VK_CONFIRMATION_CODE", "")
+        return confirmation_token, 200
 
-            if user_text and chat_id:
-                print(f"Получено сообщение: {user_text}")
-                reply = ask_gemini(user_text)
-                send_message(chat_id, reply)
+    # 2. Обработка входящего сообщения
+    if data.get("type") == "message_new":
+        object_data = data.get("object", {})
+        message = object_data.get("message", {})
+        user_id = message.get("from_id")
+        user_text = message.get("text")
 
-    return jsonify({"status": "ok"}), 200
+        if user_id and user_text:
+            print(f"Получено сообщение из ВК от {user_id}: {user_text}")
+            reply = ask_gemini(user_text)
+            send_vk_message(user_id, reply)
+
+    return "ok", 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=PORT)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
