@@ -54,10 +54,8 @@ def webhook():
     data = request.json or {}
     
     # 1. Подтверждение сервера со стороны ВК при настройке Callback API
-    if data.get("type") == "confirmation":
-        # ВК пришлет строку confirmation_code, которую нужно вернуть в ответ
-        confirmation_token = os.environ.get("VK_CONFIRMATION_CODE", "")
-        return confirmation_token, 200
+   if data.get("type") == "confirmation":
+    return "1b572e4", 200
 
     # 2. Обработка входящего сообщения
     if data.get("type") == "message_new":
