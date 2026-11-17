@@ -49,10 +49,11 @@ def index():
 @app.route("/webhook", methods=["POST", "GET"])
 def webhook():
     """Прием событий от ВКонтакте."""
-    data = request.get_json(silent=True) or {}
+    # Пытаемся получить JSON, даже если заголовки не идеальные
+    data = request.get_json(silent=True) or request.form.to_dict()
     
-    # Жесткое подтверждение для ВК
-    if data.get("type") == "confirmation":
+    # Жесткое подтверждение для ВК (проверяем тип или отдаем сразу, если это проверка)
+    if not data or data.get("type") == "confirmation" or "group_id" in str(data):
         return "1b572ce4", 200
 
     # Обработка нового сообщения
