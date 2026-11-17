@@ -43,20 +43,19 @@ def ask_gemini(prompt: str) -> str:
 
 @app.route("/", methods=["GET"])
 def index():
-    """Эндпоинт для UptimeRobot."""
-    return "VK Gemini Bot is running!", 200
+    """Эндпоинт для UptimeRobot и проверки жизни сервера."""
+    return "VK Callback Bot is running!", 200
 
 @app.route("/webhook", methods=["POST", "GET"])
 def webhook():
-    """Прием событий от ВКонтакте."""
-    # Пытаемся получить JSON, даже если заголовки не идеальные
-    data = request.get_json(silent=True) or request.form.to_dict()
+    """Прием входящих событий и подтверждения от ВКонтакте."""
+    data = request.get_json(silent=True) or {}
     
-    # Жесткое подтверждение для ВК (проверяем тип или отдаем сразу, если это проверка)
-    if not data or data.get("type") == "confirmation" or "group_id" in str(data):
-        return "1b572ce4", 200
+    # Жесткий ответ для подтверждения сервера ВК
+    if data.get("type") == "confirmation":
+        return "1b572сe4", 200
 
-    # Обработка нового сообщения
+    # Обработка входящего сообщения от пользователя
     if data.get("type") == "message_new":
         msg_obj = data.get("object", {}).get("message", {})
         user_id = msg_obj.get("from_id")
