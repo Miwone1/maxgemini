@@ -34,7 +34,7 @@ def ask_gemini(prompt: str) -> str:
         return "Gemini API ключ не настроен."
     try:
         response = gemini_client.models.generate_content(
-            model="gemini-3.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=prompt,
         )
         return response.text or "Не удалось сформировать ответ."
