@@ -54,7 +54,7 @@ def webhook():
     
     # Подтверждение сервера для ВК
     if data.get("type") == "confirmation":
-        return "1b572e4", 200
+        return "1b572сe4", 200
 
     # Обработка входящего сообщения
     if data.get("type") == "message_new":
